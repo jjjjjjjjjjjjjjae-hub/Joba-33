@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -24,7 +25,6 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Басты терезе дизайны
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -32,7 +32,6 @@ class MainActivity : Activity() {
             setBackgroundColor(0xFF121212.toInt())
         }
 
-        // Таңдалған ойынның атын көрсететін мәтін
         tvSelectedApp = TextView(this).apply {
             text = "Таңдалған ойын: $selectedAppName"
             textSize = 20f
@@ -42,7 +41,6 @@ class MainActivity : Activity() {
         }
         layout.addView(tvSelectedApp)
 
-        // Қелданба таңдау батырмасы (+)
         val btnSelectApp = Button(this).apply {
             text = "Ойын таңдау (+)"
             textSize = 16f
@@ -53,11 +51,9 @@ class MainActivity : Activity() {
         }
         layout.addView(btnSelectApp)
 
-        // Бос орын
         val space = TextView(this).apply { setPadding(0, 20, 0, 20) }
         layout.addView(space)
 
-        // Оңтайландыру және іске қосу батырмасы
         val btnStart = Button(this).apply {
             text = "ОҢТАЙЛАНДЫРУ ЖӘНЕ БАСТАУ"
             textSize = 18f
@@ -69,9 +65,24 @@ class MainActivity : Activity() {
         layout.addView(btnStart)
 
         setContentView(layout)
+        
+        // Қалқымалы терезе рұқсатын алдын ала сұрау
+        checkOverlayPermission()
     }
 
-    // Тізімнен телефондағы ойындарды көрсету функциясы
+    private fun checkOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(intent)
+                Toast.makeText(this, "Қалқымалы терезе үшін рұқсат беріңіз!", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private fun showAppPickerDialog() {
         val pm = packageManager
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
@@ -113,13 +124,12 @@ class MainActivity : Activity() {
                     val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
                     startActivity(intent)
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Рұқсат беті ашылмады", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Мазаламау рұқсаты ашылмады", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    // RAM тазалап, таңдалған ойынды қосу
     private fun boostAndPlay() {
         val pkg = selectedPackageName
         if (pkg == null) {
@@ -127,8 +137,16 @@ class MainActivity : Activity() {
             return
         }
 
+        // 1. Мазаламау режимін қосу (Хабарламаларды шектеу)
         enableDoNotDisturb()
 
+        // 2. Қалқымалы терезе рұқсаты бар болса, Гейм Турбоны іске қосу
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
+            val serviceIntent = Intent(this, FloatingWindowService::class.java)
+            startService(serviceIntent)
+        }
+
+        // 3. RAM тазалау (Артқы фондағы бағдарламаларды жабу)
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val runningProcesses = activityManager.runningAppProcesses
         runningProcesses?.forEach { processInfo ->
@@ -139,11 +157,12 @@ class MainActivity : Activity() {
             }
         }
 
+        // 4. Ойынды іске қосу
         val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
         if (launchIntent != null) {
             startActivity(launchIntent)
         } else {
-            Toast.makeText(this, "Қелданбаны ашу мүмкін болмады", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Ойынды ашу мүмкін болмады", Toast.LENGTH_LONG).show()
         }
     }
 }
