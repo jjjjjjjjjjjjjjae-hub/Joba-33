@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -24,12 +23,12 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Басты терезе дизайны (Тігінен орналасу)
+        // Басты терезе дизайны
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(50, 50, 50, 50)
-            setBackgroundColor(0xFF121212.toInt()) // Көз талдырмайтын қою түс
+            setBackgroundColor(0xFF121212.toInt())
         }
 
         // Таңдалған ойынның атын көрсететін мәтін
@@ -53,7 +52,7 @@ class MainActivity : Activity() {
         }
         layout.addView(btnSelectApp)
 
-        // Арасында кішкене бос орын
+        // Бос орын
         val space = TextView(this).apply { setPadding(0, 20, 0, 20) }
         layout.addView(space)
 
@@ -75,7 +74,7 @@ class MainActivity : Activity() {
     private fun showAppPickerDialog() {
         val pm = packageManager
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
-            category = Intent.CATEGORY_LAUNCHER
+            addCategory(Intent.CATEGORY_LAUNCHER)
         }
         val appsList = pm.queryIntentActivities(intent, 0)
 
@@ -86,7 +85,6 @@ class MainActivity : Activity() {
             val label = app.loadLabel(pm).toString()
             val pkgName = app.activityInfo.packageName
             
-            // Өзіміздің бағдарламаны тізімге қоспаймыз
             if (pkgName != packageName) {
                 appNames.add(label)
                 packageNames.add(pkgName)
@@ -130,7 +128,6 @@ class MainActivity : Activity() {
 
         enableDoNotDisturb()
 
-        // RAM-ды артқы процестерді жауып тазалау
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val runningProcesses = activityManager.runningAppProcesses
         runningProcesses?.forEach { processInfo ->
@@ -141,7 +138,6 @@ class MainActivity : Activity() {
             }
         }
 
-        // Таңдалған қолданбаны іске қосу
         val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
         if (launchIntent != null) {
             startActivity(launchIntent)
