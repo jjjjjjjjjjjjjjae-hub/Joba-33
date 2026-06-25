@@ -26,7 +26,6 @@ android {
         }
     }
     
-    // CMake нұсқасын 3.22.1 деп өзгерттік
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
@@ -45,4 +44,6 @@ android {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.12.0'
+    // Осы жолды қостық:
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 }
