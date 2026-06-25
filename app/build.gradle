@@ -14,7 +14,6 @@ android {
         versionCode 1
         versionName "1.0"
 
-        // Тек 32-bit және 64-bit ARM архитектураларына арналған NDK баптауы
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
@@ -27,11 +26,11 @@ android {
         }
     }
     
-    // CMake жолын көрсету
+    // CMake нұсқасын 3.22.1 деп өзгерттік
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
-            version "3.10.2"
+            version "3.22.1"
         }
     }
 
