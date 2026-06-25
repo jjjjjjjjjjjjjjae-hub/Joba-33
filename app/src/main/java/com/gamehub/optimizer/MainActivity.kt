@@ -70,14 +70,16 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        // Пайдаланушы баптаулардан қайтып келген сайын келесі рұқсатты кезекпен сұрайды
+        // Пайдаланушы артқа қайтқан сайын флагты ысырамыз, 
+        // сонда 1-ші рұқсаттан кейін 2-ші рұқсат терезесі бірден лақтырылады
+        isCheckingPermissions = false
         checkPermissionsSequence()
     }
 
     private fun checkPermissionsSequence() {
         if (isCheckingPermissions) return
 
-        // 1-ші Қадам: Қалқымалы терезе рұқсаты
+        // 1-ші Қадам: Қалқымалы терезе (Overlay) рұқсаты
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             isCheckingPermissions = true
             Toast.makeText(this, "1-ші қадам: Қалқымалы терезе рұқсатын беріңіз", Toast.LENGTH_LONG).show()
@@ -86,7 +88,7 @@ class MainActivity : Activity() {
             return
         }
 
-        // 2-ші Қадам: Мазаламау режимі рұқсаты
+        // 2-ші Қадам: Мазаламау (Do Not Disturb) режимі рұқсаты
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !notificationManager.isNotificationPolicyAccessGranted) {
             isCheckingPermissions = true
@@ -95,9 +97,6 @@ class MainActivity : Activity() {
             startActivity(intent)
             return
         }
-
-        // Барлық рұқсат алынса, блоктан шығарамыз
-        isCheckingPermissions = false
     }
 
     private fun showAppPickerDialog() {
@@ -138,13 +137,13 @@ class MainActivity : Activity() {
             return
         }
 
-        // Мазаламау режимін белсенді ету
+        // Мазаламау режимін қосу
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && notificationManager.isNotificationPolicyAccessGranted) {
             notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
         }
 
-        // Ойын пакетінің атын Сервиске жіберіп, іске қосамыз
+        // Қалқымалы терезені (Сервисті) ойыннан тәуелсіз іске қосу
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
             val serviceIntent = Intent(this, FloatingWindowService::class.java).apply {
                 putExtra("TARGET_PACKAGE", pkg)
@@ -152,7 +151,7 @@ class MainActivity : Activity() {
             startService(serviceIntent)
         }
 
-        // Фондық қолданбаларды тазалау
+        // Фондық процестерді тазалау (RAM оңтайландыру)
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         activityManager.runningAppProcesses?.forEach { processInfo ->
             if (processInfo.processName != pkg && processInfo.processName != packageName) {
@@ -162,7 +161,7 @@ class MainActivity : Activity() {
             }
         }
 
-        // Ойынды қосу
+        // Ойынды іске қосу
         val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
         if (launchIntent != null) {
             startActivity(launchIntent)
