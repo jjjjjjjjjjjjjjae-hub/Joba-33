@@ -2,29 +2,106 @@ package com.gamehub.optimizer
 
 import android.app.Activity
 import android.app.ActivityManager
+import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Gravity
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
 
+    private var selectedPackageName: String? = null
+    private var selectedAppName: String = "Жоқ"
+    private lateinit var tvSelectedApp: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val btnStartFreeFire = Button(this).apply {
-            text = "BOOST & START FREE FIRE"
+        // Басты терезе дизайны (Тігінен орналасу)
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(50, 50, 50, 50)
+            setBackgroundColor(0xFF121212.toInt()) // Көз талдырмайтын қою түс
+        }
+
+        // Таңдалған ойынның атын көрсететін мәтін
+        tvSelectedApp = TextView(this).apply {
+            text = "Таңдалған ойын: $selectedAppName"
+            textSize = 20f
+            setTextColor(0xFFFFFFFF.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, 60)
+        }
+        layout.addView(tvSelectedApp)
+
+        // Қолданба таңдау батырмасы (+)
+        val btnSelectApp = Button(this).apply {
+            text = "Ойын таңдау (+)"
+            textSize = 16f
+            setPadding(40, 30, 40, 30)
+            setOnClickListener {
+                showAppPickerDialog()
+            }
+        }
+        layout.addView(btnSelectApp)
+
+        // Арасында кішкене бос орын
+        val space = TextView(this).apply { setPadding(0, 20, 0, 20) }
+        layout.addView(space)
+
+        // Оңтайландыру және іске қосу батырмасы
+        val btnStart = Button(this).apply {
+            text = "ОҢТАЙЛАНДЫРУ ЖӘНЕ БАСТАУ"
             textSize = 18f
+            setPadding(50, 40, 50, 40)
             setOnClickListener {
                 boostAndPlay()
             }
         }
+        layout.addView(btnStart)
 
-        setContentView(btnStartFreeFire)
+        setContentView(layout)
+    }
+
+    // Тізімнен телефондағы ойындарды көрсету функциясы
+    private fun showAppPickerDialog() {
+        val pm = packageManager
+        val intent = Intent(Intent.ACTION_MAIN, null).apply {
+            category = Intent.CATEGORY_LAUNCHER
+        }
+        val appsList = pm.queryIntentActivities(intent, 0)
+
+        val appNames = ArrayList<String>()
+        val packageNames = ArrayList<String>()
+
+        for (app in appsList) {
+            val label = app.loadLabel(pm).toString()
+            val pkgName = app.activityInfo.packageName
+            
+            // Өзіміздің бағдарламаны тізімге қоспаймыз
+            if (pkgName != packageName) {
+                appNames.add(label)
+                packageNames.add(pkgName)
+            }
+        }
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Тізімнен ойынды таңдаңыз:")
+        builder.setItems(appNames.toTypedArray()) { _, which ->
+            selectedPackageName = packageNames[which]
+            selectedAppName = appNames[which]
+            tvSelectedApp.text = "Таңдалған ойын: $selectedAppName"
+            Toast.makeText(this, "$selectedAppName таңдалды", Toast.LENGTH_SHORT).show()
+        }
+        builder.show()
     }
 
     private fun enableDoNotDisturb() {
@@ -43,24 +120,33 @@ class MainActivity : Activity() {
         }
     }
 
+    // RAM тазалап, таңдалған ойынды қосу
     private fun boostAndPlay() {
+        val pkg = selectedPackageName
+        if (pkg == null) {
+            Toast.makeText(this, "Алдымен ойын таңдау (+) батырмасын басыңыз!", Toast.LENGTH_LONG).show()
+            return
+        }
+
         enableDoNotDisturb()
 
+        // RAM-ды артқы процестерді жауып тазалау
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val runningProcesses = activityManager.runningAppProcesses
         runningProcesses?.forEach { processInfo ->
-            if (processInfo.processName != "com.dts.freefireth" && processInfo.processName != packageName) {
+            if (processInfo.processName != pkg && processInfo.processName != packageName) {
                 try {
                     activityManager.killBackgroundProcesses(processInfo.processName)
                 } catch (e: Exception) {}
             }
         }
 
-        val launchIntent = packageManager.getLaunchIntentForPackage("com.dts.freefireth")
+        // Таңдалған қолданбаны іске қосу
+        val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
         if (launchIntent != null) {
             startActivity(launchIntent)
         } else {
-            Toast.makeText(this, "Free Fire телефоныңызда орнатылмаған!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Қолданбаны ашу мүмкін болмады", Toast.LENGTH_LONG).show()
         }
     }
 }
