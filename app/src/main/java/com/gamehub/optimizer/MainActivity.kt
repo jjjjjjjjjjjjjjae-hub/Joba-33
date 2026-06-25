@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
@@ -41,7 +42,7 @@ class MainActivity : Activity() {
         }
         layout.addView(tvSelectedApp)
 
-        // Қолданба таңдау батырмасы (+)
+        // Қелданба таңдау батырмасы (+)
         val btnSelectApp = Button(this).apply {
             text = "Ойын таңдау (+)"
             textSize = 16f
@@ -142,7 +143,7 @@ class MainActivity : Activity() {
         if (launchIntent != null) {
             startActivity(launchIntent)
         } else {
-            Toast.makeText(this, "Қолданбаны ашу мүмкін болмады", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Қелданбаны ашу мүмкін болмады", Toast.LENGTH_LONG).show()
         }
     }
 }
