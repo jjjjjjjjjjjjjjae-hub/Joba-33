@@ -1,12 +1,13 @@
 package com.gamehub.optimizer
 
 import android.app.ActivityManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
@@ -16,53 +17,49 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val btnOptimize = findViewById<Button>(R.id.btn_optimize)
-        val tvStatus = findViewById<TextView>(R.id.tv_status)
-
-        btnOptimize.setOnClickListener {
-            tvStatus.text = "Оңтайландыру жұмыстары орындалуда..."
-
-            // 1. Желілік қателіктерді автоматты тексеру және реттеу
-            fixNetworkError()
-
-            // 2. RAM босату және басқа фондық бағдарламаларды шектеу
-            optimizeRamAndBackground()
-
-            tvStatus.text = "Дайын! Free Fire іске қосылуда..."
-            
-            // 3. Free Fire ойынын автоматты түрде ашу
-            launchFreeFire()
-        }
-    }
-
-    // Желілік байланысты және интернет қосылымын тексеру
-    private fun fixNetworkError() {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkInfo = connectivityManager.activeNetworkInfo
-            Toast.makeText(this, "Сервис қателігі анықталды! Желілік байланыс қайта орнатылуда...", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    // Жедел жадыны (RAM) босату және басқа ауыр фондық процестерді шектеу
-    private fun optimizeRamAndBackground() {
-        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val runningProcesses = activityManager.runningAppProcesses
+        // Дизайндағы батырманы кодпен байланыстыру
+        val btnStartFreeFire = findViewById<Button>(R.id.btnStartFreeFire)
         
-        runningProcesses?.forEach { processInfo ->
-            // Егер процесс Free Fire немесе біздің қосымша болмаса, оны жабуға тырысамыз
-            if (processInfo.processName != "com.dts.freefireth" && processInfo.processName != packageName) {
-                activityManager.killBackgroundProcesses(processInfo.processName)
+        // Батырманы басқанда үдету функциясын іске қосу
+        btnStartFreeFire.setOnClickListener {
+            boostAndPlay()
+        }
+    }
+
+    private fun enableDoNotDisturb() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (notificationManager.isNotificationPolicyAccessGranted) {
+                // Мазаламау режимін қосу (Хабарламаларды шектеу)
+                notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+            } else {
+                // Рұқсат болмаса, баптауларға бағыттау
+                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                startActivity(intent)
             }
         }
     }
 
-    // Free Fire ойынын пакет атауы арқылы ашу
-    private fun launchFreeFire() {
+    private fun boostAndPlay() {
+        // 1. Хабарламаларды өшіру
+        enableDoNotDisturb()
+
+        // 2. RAM босату (Фондық процестерді жабу)
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val runningProcesses = activityManager.runningAppProcesses
+        runningProcesses?.forEach { processInfo ->
+            if (processInfo.processName != "com.dts.freefireth" && processInfo.processName != packageName) {
+                activityManager.killBackgroundProcesses(processInfo.processName)
+            }
+        }
+
+        // 3. Free Fire ойынын іске қосу
         val launchIntent = packageManager.getLaunchIntentForPackage("com.dts.freefireth")
         if (launchIntent != null) {
             startActivity(launchIntent)
         } else {
-            Toast.makeText(this, "Сөндірілді немесе Free Fire ойыны табылмады!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Free Fire телефоныңызда орнатылмаған!", Toast.LENGTH_SHORT).show()
         }
     }
 }
+
