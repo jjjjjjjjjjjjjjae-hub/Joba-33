@@ -23,6 +23,17 @@ class MainActivity : Activity() {
     private lateinit var tvSelectedApp: TextView
     private var isCheckingPermissions = false
 
+    // C++ (Native) функцияларын жариялау
+    external fun findBaseAddress(libName: String): Long
+    external fun readMemoryFloat(address: Long): Float
+
+    companion object {
+        // C++ кітапханасын жүктеу
+        init {
+            System.loadLibrary("native-lib")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -46,9 +57,7 @@ class MainActivity : Activity() {
             text = "Ойын таңдау (+)"
             textSize = 16f
             setPadding(40, 30, 40, 30)
-            setOnClickListener {
-                showAppPickerDialog()
-            }
+            setOnClickListener { showAppPickerDialog() }
         }
         layout.addView(btnSelectApp)
 
@@ -59,19 +68,21 @@ class MainActivity : Activity() {
             text = "ОҢТАЙЛАНДЫРУ ЖӘНЕ БАСТАУ"
             textSize = 18f
             setPadding(50, 40, 50, 40)
-            setOnClickListener {
-                boostAndPlay()
-            }
+            setOnClickListener { boostAndPlay() }
         }
         layout.addView(btnStart)
 
         setContentView(layout)
+        
+        // Тест ретінде С++ жұмысын тексеру (Логтан немесе Toast-тан көруге болады)
+        val testBase = findBaseAddress("libil2cpp.so")
+        if (testBase != 0L) {
+            Toast.makeText(this, "C++ сәтті іске қосылды!", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        // Пайдаланушы артқа қайтқан сайын флагты ысырамыз, 
-        // сонда 1-ші рұқсаттан кейін 2-ші рұқсат терезесі бірден лақтырылады
         isCheckingPermissions = false
         checkPermissionsSequence()
     }
@@ -79,7 +90,6 @@ class MainActivity : Activity() {
     private fun checkPermissionsSequence() {
         if (isCheckingPermissions) return
 
-        // 1-ші Қадам: Қалқымалы терезе (Overlay) рұқсаты
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             isCheckingPermissions = true
             Toast.makeText(this, "1-ші қадам: Қалқымалы терезе рұқсатын беріңіз", Toast.LENGTH_LONG).show()
@@ -88,7 +98,6 @@ class MainActivity : Activity() {
             return
         }
 
-        // 2-ші Қадам: Мазаламау (Do Not Disturb) режимі рұқсаты
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !notificationManager.isNotificationPolicyAccessGranted) {
             isCheckingPermissions = true
@@ -112,7 +121,6 @@ class MainActivity : Activity() {
         for (app in appsList) {
             val label = app.loadLabel(pm).toString()
             val pkgName = app.activityInfo.packageName
-            
             if (pkgName != packageName) {
                 appNames.add(label)
                 packageNames.add(pkgName)
@@ -125,7 +133,6 @@ class MainActivity : Activity() {
             selectedPackageName = packageNames[which]
             selectedAppName = appNames[which]
             tvSelectedApp.text = "Таңдалған ойын: $selectedAppName"
-            Toast.makeText(this, "$selectedAppName таңдалды", Toast.LENGTH_SHORT).show()
         }
         builder.show()
     }
@@ -133,25 +140,10 @@ class MainActivity : Activity() {
     private fun boostAndPlay() {
         val pkg = selectedPackageName
         if (pkg == null) {
-            Toast.makeText(this, "Алдымен ойын таңдау (+) батырмасын басыңыз!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Алдымен ойын таңдаңыз!", Toast.LENGTH_LONG).show()
             return
         }
 
-        // Мазаламау режимін қосу
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && notificationManager.isNotificationPolicyAccessGranted) {
-            notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
-        }
-
-        // Қалқымалы терезені (Сервисті) ойыннан тәуелсіз іске қосу
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)) {
-            val serviceIntent = Intent(this, FloatingWindowService::class.java).apply {
-                putExtra("TARGET_PACKAGE", pkg)
-            }
-            startService(serviceIntent)
-        }
-
-        // Фондық процестерді тазалау (RAM оңтайландыру)
         val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         activityManager.runningAppProcesses?.forEach { processInfo ->
             if (processInfo.processName != pkg && processInfo.processName != packageName) {
@@ -161,17 +153,9 @@ class MainActivity : Activity() {
             }
         }
 
-        // Ойынды іске қосу
         val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
         if (launchIntent != null) {
             startActivity(launchIntent)
-        } else {
-            Toast.makeText(this, "Ойынды ашу мүмкін болмады", Toast.LENGTH_LONG).show()
         }
-    }
-
-    override fun onNewIntent(intent: Intent?) {
-        super.onNewIntent(intent)
-        isCheckingPermissions = false
     }
 }
